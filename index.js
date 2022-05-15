@@ -63,6 +63,8 @@ async function run() {
         */
         app.get('/booking', async (req, res) => {
             const patient = req.query.patient;
+            const authorization = req.headers.authorization
+
             const query = { patient: patient }
             const bookings = await bookingCollaction.find(query).toArray()
 
@@ -71,6 +73,7 @@ async function run() {
 
         app.post('/booking', async (req, res) => {
             const booking = req.body;
+
             const query = { treetment: booking.treetment, date: booking.date, patent: booking.patent }
             const existes = await bookingCollaction.findOne(query);
             if (existes) {
