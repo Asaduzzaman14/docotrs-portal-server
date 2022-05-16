@@ -20,6 +20,24 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'UnAuthorized access' });
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECREET, function (err, decoded) {
+        console.log(err);
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' })
+        }
+        req.decoded = decoded;
+        next();
+    })
+
+}
+
+
 async function run() {
     try {
         await client.connect()
@@ -29,12 +47,35 @@ async function run() {
 
 
 
+
         app.get('/service', async (req, res) => {
             const query = {}
             const cursor = serviceCollaction.find(query)
             const service = await cursor.toArray()
             res.send(service)
         })
+
+        app.get('/user', verifyJWT, async (req, res) => {
+            const users = await userCollaction.find().toArray()
+            res.send(users)
+        })
+
+
+        // admin
+        app.put('/user/admin/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' },
+            };
+
+            const result = await userCollaction.updateOne(filter, updateDoc);
+            res.send({ result });
+
+        })
+
+
 
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
@@ -61,15 +102,25 @@ async function run() {
          * app.delete('/booking/:id')  
          * 
         */
-        app.get('/booking', async (req, res) => {
+        app.get('/booking', verifyJWT, async (req, res) => {
             const patient = req.query.patient;
-            const authorization = req.headers.authorization
 
-            const query = { patient: patient }
-            const bookings = await bookingCollaction.find(query).toArray()
+            const decodedEmail = req.decoded.email;
+            console.log(patient, decodedEmail);
 
-            res.send(bookings)
+            if (patient === decodedEmail) {
+                const query = { patient: patient }
+                const bookings = await bookingCollaction.find(query).toArray()
+
+                res.send(bookings)
+            }
+            else {
+                return res.status(403).send({ message: "Forbidden access" })
+            }
+
         })
+
+
 
         app.post('/booking', async (req, res) => {
             const booking = req.body;
@@ -87,7 +138,7 @@ async function run() {
         });
 
         app.get('/available', async (req, res) => {
-            const date = req.query.date || 'May 14, 2022';
+            const date = req.query.date;
 
 
             // step 1: get all services
