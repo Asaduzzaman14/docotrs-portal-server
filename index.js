@@ -3,6 +3,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { request } = require('express');
 require('dotenv').config();
 const port = process.env.PORT || 5000
 
@@ -59,6 +60,49 @@ async function run() {
             }
 
         }
+
+        // mailChamp
+        app.post('/subscribe', (req, res) => {
+            const { email } = req.body
+            console.log(req.body);
+
+
+            const myData = {
+                mambers: {
+                    email_address: email,
+                    status: 'pandicg',
+                }
+            }
+            const myDataPost = JSON.stringify(myData)
+
+            const options = {
+                url: '',
+                method: 'POST',
+                headers: {
+                    authorization: `AUTH ..`
+                },
+                body: myDataPost
+            }
+
+            if (email) {
+                request(options, (err, response, body) => {
+                    if (err) {
+                        res.json({ error: err })
+                    } else {
+                        if (js) {
+                            res.sendStatus(200);
+                        } else {
+                            res.redirect('/success.html')
+                        }
+                    }
+                })
+
+            } else {
+                res.status(404).send({ message: 'Failed' })
+            }
+
+        })
+
 
         // paymant
         app.post('/create-payment-intent', async (req, res) => {
@@ -134,7 +178,7 @@ async function run() {
             };
 
             const result = await userCollection.updateOne(filter, updateDoc, options);
-            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECREET, { expiresIn: '1d' })
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' })
             res.send({ result, token });
 
         })
@@ -153,11 +197,10 @@ async function run() {
             const patient = req.query.patient;
 
             const decodedEmail = req.decoded.email;
-
+            console.log('user email', decodedEmail);
             if (patient === decodedEmail) {
                 const query = { patient: patient }
                 const bookings = await bookingCollection.find(query).toArray()
-
                 res.send(bookings)
             }
             else {
@@ -171,8 +214,10 @@ async function run() {
         app.post('/booking', async (req, res) => {
             const booking = req.body;
 
-            const query = { treetment: booking.treetment, date: booking.date, patent: booking.patent }
+            const query = { treetment: booking.treetment, date: booking.date, patient: booking.patient }
+            console.log('this is qury', query);
             const existes = await bookingCollection.findOne(query);
+
             if (existes) {
                 return res.send({ success: false, booking: existes })
             }
