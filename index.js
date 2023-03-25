@@ -132,9 +132,6 @@ async function run() {
             res.send(updatedBooking)
         })
 
-
-
-
         app.get('/service', async (req, res) => {
             const query = {}
             const cursor = serviceCollection.find(query)
