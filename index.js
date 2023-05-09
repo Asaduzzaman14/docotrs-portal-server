@@ -10,6 +10,10 @@ const port = process.env.PORT || 5000
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 
 
+const nodemailer = require("nodemailer");
+const mg = require('nodemailer-mailgun-transport');
+
+
 
 app.use(express.json())
 app.use(cors())
@@ -36,7 +40,53 @@ function verifyJWT(req, res, next) {
         next();
     })
 
+};
+
+
+const auth = {
+    auth: {
+      api_key: 'ef1e85ba3e58c8272082dbd97da0f865-6b161b0a-a146f843',
+      domain: 'sandbox70bf3d1b06df4d71a7f106bfe4e0cd8d.mailgun.org'
+    }
+    
 }
+
+const nodemailerMailgun = nodemailer.createTransport(mg(auth));
+
+function sendAppointmentEmail(booking) {
+    const { patient, patientName, treatment, date, slot } = booking;
+  
+    var email = {
+      from: "asaduzzaman1156@gmail.com",
+      to: patient,
+      subject: `Your Appointment for ${treatment} is on ${date} at ${slot} is Confirmed`,
+      text: `Your Appointment for ${treatment} is on ${date} at ${slot} is Confirmed`,
+      html: `
+        <div>
+          <p> Hello ${patientName}, </p>
+          <h3>Your Appointment for ${treatment} is confirmed</h3>
+          <p>Looking forward to seeing you on ${date} at ${slot}.</p>
+  
+          <h3>Our Address</h3>
+          <p>Andor Killa Bandorban</p>
+          <p>Bangladesh</p>
+          <a href="https://web.programming-hero.com/">unsubscribe</a>
+        </div>
+      `,
+    };
+  
+    nodemailerMailgun.sendMail(email, (err, info) => {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log(info);
+      }
+    });
+  }
+  
+
+
+
 
 
 async function run() {
@@ -66,11 +116,10 @@ async function run() {
             const { email } = req.body
             console.log(req.body);
 
-
             const myData = {
                 mambers: {
                     email_address: email,
-                    status: 'pandicg',
+                    status: 'panding',
                 }
             }
             const myDataPost = JSON.stringify(myData)
@@ -151,8 +200,6 @@ async function run() {
             res.send({ admin: isAdmin })
         })
 
-
-
         // admin
         app.put('/user/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
             const email = req.params.email;
@@ -192,7 +239,6 @@ async function run() {
         */
         app.get('/booking', verifyJWT, async (req, res) => {
             const patient = req.query.patient;
-
             const decodedEmail = req.decoded.email;
             console.log('user email', decodedEmail);
             if (patient === decodedEmail) {
@@ -298,6 +344,27 @@ async function run() {
 
 
 run().catch(console.dir())
+
+
+
+
+const email = {
+    from: 'myemail@example.com',
+    // to: 'asaduzzaman1156@gmail.com', 
+    to: 'asadasad9282@gmail.com', 
+    subject: 'Hey you, awesome!',
+    text: 'Mailgun rocks, pow pow wow!'
+  }
+
+
+// ! For testing
+
+app.post("/email", async (req, res) => {
+  const booking = req.body;
+  console.log(booking);
+  sendAppointmentEmail(booking);
+  res.send({ status: true });
+});
 
 
 
